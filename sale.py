@@ -6,6 +6,7 @@
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
+from trytond.modules.account_invoice_ar.invoice import INVOICE_TYPE_AFIP_CODE
 
 __all__ = ['Sale']
 __metaclass__ = PoolMeta
@@ -35,6 +36,55 @@ class Sale:
         if config.pos:
             return config.pos.id
 
+    @fields.depends('pos', 'company')
+    def on_change_party(self):
+        super(Sale, self).on_change_party()
+        self.invoice_type = None
+        if self.party and self.pos:
+            self._invoice_type()
+
+    def _invoice_type(self):
+        PosSequence = Pool().get('account.pos.sequence')
+        if not self.pos:
+            self.invoice_type = None
+            return
+
+        client_iva = company_iva = None
+        if self.party:
+            client_iva = self.party.iva_condition
+        if self.company:
+            company_iva = self.company.party.iva_condition
+
+        if company_iva == 'responsable_inscripto':
+            if client_iva is None:
+                return
+            if client_iva == 'responsable_inscripto':
+                kind = 'A'
+            elif client_iva == 'consumidor_final':
+                kind = 'B'
+            elif self.party.vat_number: # CUIT Argentino
+                kind = 'B'
+            else:
+                kind = 'E'
+        else:
+            kind = 'C'
+            if self.party.vat_number_afip_foreign: # Identificador AFIP Foraneo
+                kind = 'E'
+
+        invoice_type, invoice_type_desc = INVOICE_TYPE_AFIP_CODE[
+            ('out_invoice', kind)
+            ]
+        sequences = PosSequence.search([
+            ('pos', '=', self.pos.id),
+            ('invoice_type', '=', invoice_type)
+            ])
+        if len(sequences) == 0:
+            self.raise_user_error('missing_sequence', invoice_type_desc)
+        elif len(sequences) > 1:
+            self.raise_user_error('too_many_sequences', invoice_type_desc)
+        else:
+            self.invoice_type = sequences[0].id
+
     def create_invoice(self, invoice_type):
         invoice = super(Sale, self).create_invoice(invoice_type)
         if invoice:
@@ -49,10 +99,11 @@ class Sale:
     def get_pyafipws_concept(self):
         products = {'1': 0, '2': 0}
         for line in self.lines:
-            if line.product.type == 'goods':
-                products['1'] += 1
-            if line.product.type == 'service':
-                products['2'] += 1
+            if line.product:
+                if line.product.type == 'goods':
+                    products['1'] += 1
+                if line.product.type == 'service':
+                    products['2'] += 1
 
         if products['1'] != 0 and products['2'] != 0:
             return '3'
