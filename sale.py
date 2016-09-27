@@ -29,6 +29,17 @@ class Sale:
         domain=([('pos', '=', Eval('pos'))]),
         depends=['state'])
 
+    @classmethod
+    def __setup__(cls):
+        super(Sale, cls).__setup__()
+
+        cls._error_messages.update({
+            'missing_sequence':
+                u'No existe una secuencia para facturas del tipo: %s',
+            'too_many_sequences':
+                u'Existe mas de una secuencia para facturas del tipo: %s',
+            })
+
     @staticmethod
     def default_pos():
         Configuration = Pool().get('sale.configuration')
@@ -72,7 +83,7 @@ class Sale:
                 kind = 'E'
 
         invoice_type, invoice_type_desc = INVOICE_TYPE_AFIP_CODE[
-            ('out_invoice', kind)
+            ('out', kind)
             ]
         sequences = PosSequence.search([
             ('pos', '=', self.pos.id),
@@ -85,8 +96,8 @@ class Sale:
         else:
             self.invoice_type = sequences[0].id
 
-    def create_invoice(self, invoice_type):
-        invoice = super(Sale, self).create_invoice(invoice_type)
+    def create_invoice(self):
+        invoice = super(Sale, self).create_invoice()
         if invoice:
             invoice.pos = self.pos
             invoice.invoice_type = self.invoice_type
