@@ -7,6 +7,8 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.modules.account_invoice_ar.invoice import INVOICE_TYPE_AFIP_CODE
+import calendar
+import datetime
 
 __all__ = ['Sale']
 __metaclass__ = PoolMeta
@@ -15,18 +17,11 @@ __metaclass__ = PoolMeta
 class Sale:
     __name__ = 'sale.sale'
 
-    pos = fields.Many2One(
-        'account.pos', 'Point of Sale',
-        states={
-            'readonly': Eval('state') != 'draft',
-        },
-        depends=['state'])
     invoice_type = fields.Many2One(
         'account.pos.sequence', 'Invoice Type',
         states={
             'readonly': Eval('state') != 'draft',
         },
-        domain=([('pos', '=', Eval('pos'))]),
         depends=['state'])
 
     @classmethod
@@ -40,23 +35,16 @@ class Sale:
                 u'Existe mas de una secuencia para facturas del tipo: %s',
             })
 
-    @staticmethod
-    def default_pos():
-        Configuration = Pool().get('sale.configuration')
-        config = Configuration(1)
-        if config.pos:
-            return config.pos.id
-
-    @fields.depends('pos', 'company')
+    @fields.depends('company', 'sale_device')
     def on_change_party(self):
         super(Sale, self).on_change_party()
         self.invoice_type = None
-        if self.party and self.pos:
+        if self.party and self.sale_device:
             self._invoice_type()
 
     def _invoice_type(self):
         PosSequence = Pool().get('account.pos.sequence')
-        if not self.pos:
+        if not self.sale_device:
             self.invoice_type = None
             return
 
@@ -86,7 +74,7 @@ class Sale:
             ('out', kind)
             ]
         sequences = PosSequence.search([
-            ('pos', '=', self.pos.id),
+            ('pos', '=', self.sale_device.pos_ar.id),
             ('invoice_type', '=', invoice_type)
             ])
         if len(sequences) == 0:
@@ -99,7 +87,7 @@ class Sale:
     def create_invoice(self):
         invoice = super(Sale, self).create_invoice()
         if invoice:
-            invoice.pos = self.pos
+            invoice.pos = self.sale_device.pos_ar
             invoice.invoice_type = self.invoice_type
             invoice.pyafipws_concept = self.get_pyafipws_concept()
             if invoice.pyafipws_concept == '2' or invoice.pyafipws_concept == '3':
@@ -126,8 +114,6 @@ class Sale:
             return ''
 
     def get_pyafipws_billings_date(self):
-        import calendar
-        import datetime
         year = int(datetime.date.today().strftime("%Y"))
         month = int(datetime.date.today().strftime("%m"))
         monthrange = calendar.monthrange(year, month)
