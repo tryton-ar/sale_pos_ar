@@ -2,8 +2,8 @@
 <!-- This file is part of sale_pos_ar Tryton.  The COPYRIGHT file at the top level of
 this repository contains the full copyright notices and license terms. -->
 <data>
-    <xpath expr="/form/notebook/page[@id='sale']"
-        position="inside">
+    <xpath expr="/form/notebook/page[@id='sale']/field[@name='sale_device']"
+        position="after">
             <label name="invoice_type" />
             <field name="invoice_type" widget='selection'/>
     </xpath>
