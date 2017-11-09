@@ -36,18 +36,18 @@ class Sale:
         if config.pos:
             return config.pos.id
 
-    @fields.depends('pos', 'company')
-    def on_change_party(self):
-        super(Sale, self).on_change_party()
-        self.invoice_type = None
-        if self.party and self.pos:
-            self._invoice_type()
+    #@fields.depends('pos', 'company')
+    #def on_change_party(self):
+    #    super(Sale, self).on_change_party()
+    #    self.invoice_type = None
+    #    if self.party and self.pos:
+    #        self._invoice_type()
 
-    def _invoice_type(self):
+    def _invoice_type(self, type='out_invoice'):
         PosSequence = Pool().get('account.pos.sequence')
-        if not self.pos:
-            self.invoice_type = None
-            return
+        #if not self.pos:
+        #    self.invoice_type = None
+        #    return
 
         client_iva = company_iva = None
         if self.party:
@@ -72,7 +72,7 @@ class Sale:
                 kind = 'E'
 
         invoice_type, invoice_type_desc = INVOICE_TYPE_AFIP_CODE[
-            ('out_invoice', kind)
+            (type, kind)
             ]
         sequences = PosSequence.search([
             ('pos', '=', self.pos.id),
@@ -83,13 +83,14 @@ class Sale:
         elif len(sequences) > 1:
             self.raise_user_error('too_many_sequences', invoice_type_desc)
         else:
-            self.invoice_type = sequences[0].id
+            #self.invoice_type = sequences[0].id
+            return sequences[0].id
 
     def create_invoice(self, invoice_type):
         invoice = super(Sale, self).create_invoice(invoice_type)
         if invoice:
             invoice.pos = self.pos
-            invoice.invoice_type = self.invoice_type
+            invoice.invoice_type = self._invoice_type(invoice.type)
             invoice.pyafipws_concept = self.get_pyafipws_concept()
             if invoice.pyafipws_concept == '2' or invoice.pyafipws_concept == '3':
                 invoice.pyafipws_billing_start_date, invoice.pyafipws_billing_end_date = self.get_pyafipws_billings_date()
