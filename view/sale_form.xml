@@ -6,8 +6,10 @@ this repository contains the full copyright notices and license terms. -->
         <page string="Factura Electronica" id="factura_eletronica">
             <label name="pos" />
             <field name="pos" />
+            <!--
             <label name="invoice_type" />
             <field name="invoice_type" widget='selection'/>
+            -->
         </page>
     </xpath>
 </data>
