@@ -17,6 +17,7 @@ class Sale:
 
     pos = fields.Many2One(
         'account.pos', 'Point of Sale',
+        domain=[('pos.pos_daily_report', '!=', True)],
         states={
             'readonly': Eval('state') != 'draft',
         },
