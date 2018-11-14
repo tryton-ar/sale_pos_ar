@@ -1,7 +1,9 @@
 # The COPYRIGHT file at the top level of this repository contains the
 # full copyright notices and license terms.
-from trytond.model import fields
-from trytond.pool import PoolMeta
+from trytond import backend
+from trytond.model import fields, ModelSQL, CompanyValueMixin
+from trytond.pool import PoolMeta, Pool
+from trytond.tools.multivalue import migrate_property
 
 __all__ = ['Configuration']
 
@@ -9,8 +11,45 @@ __all__ = ['Configuration']
 class Configuration:
     __metaclass__ = PoolMeta
     __name__ = 'sale.configuration'
-    pos = fields.Property(fields.Many2One('account.pos', 'Point of sale',
-            domain=[('pos_daily_report', '=', False)],
-            required=True,
-            help='The point of sale to be '
-            'used when the invoice is created.'))
+    pos = fields.MultiValue(fields.Many2One(
+            'account.pos', "Point Of sale", required=True,
+            domain=[
+                ('pos_daily_report', '=', False)
+                ]))
+
+    @classmethod
+    def multivalue_model(cls, field):
+        pool = Pool()
+        if field == 'pos':
+            return pool.get('sale.configuration.pos')
+        return super(Configuration, cls).multivalue_model(field)
+
+
+class ConfigurationPos(ModelSQL, CompanyValueMixin):
+    "Sale Configuration Pos"
+    __name__ = 'sale.configuration.pos'
+    pos = fields.Many2One(
+        'account.pos', "Point Of Sale", required=True,
+        domain=[
+            ('pos_daily_report', '=', False)
+            ],
+        depends=['company'])
+
+    @classmethod
+    def __register__(cls, module_name):
+        TableHandler = backend.get('TableHandler')
+        exist = TableHandler.table_exist(cls._table)
+
+        super(ConfigurationPos, cls).__register__(module_name)
+
+        if not exist:
+            cls._migrate_property([], [], [])
+
+    @classmethod
+    def _migrate_property(cls, field_names, value_names, fields):
+        field_names.append('pos')
+        value_names.append('pos')
+        fields.append('company')
+        migrate_property(
+            'sale.configuration', field_names, cls, value_names,
+            fields=fields)
