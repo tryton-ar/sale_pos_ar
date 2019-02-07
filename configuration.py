@@ -9,8 +9,7 @@ from trytond.modules.company.model import CompanyValueMixin
 __all__ = ['Configuration']
 
 
-class Configuration:
-    __metaclass__ = PoolMeta
+class Configuration(metaclass=PoolMeta):
     __name__ = 'sale.configuration'
     pos = fields.MultiValue(fields.Many2One(
             'account.pos', "Point of Sale", required=True,
