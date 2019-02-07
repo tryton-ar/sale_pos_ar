@@ -40,7 +40,9 @@ download_url = 'https://github.com/tryton-ar/sale_pos_ar/tree/%s.%s' % (
 
 requires = []
 for dep in info.get('depends', []):
-    if not re.match(r'(ir|res)(\W|$)', dep):
+    if dep == 'account_invoice_ar':
+        requires.append(get_require_version('trytonar_%s' % dep))
+    elif not re.match(r'(ir|res)(\W|$)', dep):
         requires.append(get_require_version('trytond_%s' % dep))
 requires.append(get_require_version('trytond'))
 
