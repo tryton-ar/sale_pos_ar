@@ -13,7 +13,7 @@ class Configuration:
     __metaclass__ = PoolMeta
     __name__ = 'sale.configuration'
     pos = fields.MultiValue(fields.Many2One(
-            'account.pos', "Point Of sale", required=True,
+            'account.pos', "Point of Sale", required=True,
             domain=[
                 ('pos_daily_report', '=', False)
                 ]))
