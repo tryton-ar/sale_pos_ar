@@ -47,7 +47,14 @@ for dep in info.get('depends', []):
 requires.append(get_require_version('trytond'))
 
 tests_require = [get_require_version('proteus')]
-dependency_links = []
+dependency_links =[
+    'https://github.com/tryton-ar/account_invoice_ar/tarball/%s.%s#egg=trytonar_account_invoice_ar-%s.%s' \
+        % (major_version, minor_version, major_version, minor_version),
+    'https://github.com/reingart/pyafipws/tarball/py3k#egg=pyafipws',
+    'https://github.com/pysimplesoap/pysimplesoap/tarball/stable_py3k#egg=pysimplesoap',
+    'https://github.com/tryton-ar/party_ar/tarball/%s.%s#egg=trytonar_party_ar-%s.%s' \
+        % (major_version, minor_version, major_version, minor_version),
+    ]
 
 setup(name=name,
     version=version,
@@ -63,7 +70,7 @@ setup(name=name,
         ],
     package_data={
         'trytond.modules.sale_pos_ar': (info.get('xml', [])
-            + ['tryton.cfg', 'view/*.xml', 'locale/*.po', 'data/*.xml']),
+            + ['tryton.cfg', 'view/*.xml', 'locale/*.po']),
         },
     classifiers=[
         'Development Status :: 4 - Beta',
