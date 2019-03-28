@@ -193,6 +193,7 @@ Return sales using the wizard::
 
     >>> sale_to_return = Sale()
     >>> sale_to_return.party = customer
+    >>> sale_to_return.pos = pos
     >>> sale_to_return.payment_term = payment_term
     >>> sale_line = sale_to_return.lines.new()
     >>> sale_line.product = service
@@ -213,3 +214,14 @@ Return sales using the wizard::
     True
     >>> sorted([x.quantity or 0 for x in returned_sale.lines])
     [-1.0, 0]
+    >>> returned_sale.click('quote')
+    >>> returned_sale.click('confirm')
+    >>> returned_sale.state
+    'processing'
+    >>> returned_sale.invoice_state
+    'waiting'
+    >>> returned_invoice, = returned_sale.invoices
+    >>> returned_invoice.pos == pos
+    True
+    >>> returned_invoice.invoice_type == invoice_types['3']
+    True
