@@ -10,4 +10,5 @@ def register():
     Pool.register(
         sale.Sale,
         configuration.Configuration,
+        configuration.ConfigurationPos,
         module='sale_pos_ar', type_='model')
