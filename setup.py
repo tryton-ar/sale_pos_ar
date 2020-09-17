@@ -55,6 +55,8 @@ dependency_links =[
     'https://github.com/tryton-ar/party_ar/tarball/%s.%s#egg=trytonar_party_ar-%s.%s' \
         % (major_version, minor_version, major_version, minor_version),
     ]
+if minor_version % 2:
+    dependency_links.append('https://trydevpi.tryton.org/')
 
 setup(name=name,
     version=version,
