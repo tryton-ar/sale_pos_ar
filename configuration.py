@@ -1,19 +1,20 @@
-# The COPYRIGHT file at the top level of this repository contains the
-# full copyright notices and license terms.
-from trytond import backend
+# This file is part sale_pos_ar module for Tryton.
+# The COPYRIGHT file at the top level of this repository contains
+# the full copyright notices and license terms.
+
 from trytond.model import fields, ModelSQL
 from trytond.pool import PoolMeta, Pool
+from trytond import backend
 from trytond.tools.multivalue import migrate_property
 from trytond.modules.company.model import CompanyValueMixin
 
 
 class Configuration(metaclass=PoolMeta):
     __name__ = 'sale.configuration'
+
     pos = fields.MultiValue(fields.Many2One(
-            'account.pos', "Point of Sale", required=True,
-            domain=[
-                ('pos_daily_report', '=', False)
-                ]))
+        'account.pos', "Point of Sale", required=True,
+        domain=[('pos_daily_report', '=', False)]))
 
     @classmethod
     def multivalue_model(cls, field):
@@ -24,13 +25,11 @@ class Configuration(metaclass=PoolMeta):
 
 
 class ConfigurationPos(ModelSQL, CompanyValueMixin):
-    "Sale Configuration Pos"
+    "Sale PoS Configuration"
     __name__ = 'sale.configuration.pos'
-    pos = fields.Many2One(
-        'account.pos', "Point Of Sale", required=True,
-        domain=[
-            ('pos_daily_report', '=', False)
-            ],
+
+    pos = fields.Many2One('account.pos', "Point of Sale", required=True,
+        domain=[('pos_daily_report', '=', False)],
         depends=['company'])
 
     @classmethod
