@@ -6,6 +6,18 @@ msgctxt "field:sale.configuration,pos:"
 msgid "Point of Sale"
 msgstr "Punto de Venta"
 
+msgctxt "field:sale.configuration.pos,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:sale.configuration.pos,pos:"
+msgid "Point of Sale"
+msgstr "Punto de Venta"
+
 msgctxt "field:sale.sale,pos:"
 msgid "Point of Sale"
 msgstr "Punto de Venta"
+
+msgctxt "model:sale.configuration.pos,name:"
+msgid "Sale PoS Configuration"
+msgstr "Configuración de Punto de Venta"
