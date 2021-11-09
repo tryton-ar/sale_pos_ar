@@ -25,7 +25,7 @@ class Sale(metaclass=PoolMeta):
             return config.pos.id
 
     def create_invoice(self):
-        invoice = super(Sale, self).create_invoice()
+        invoice = super().create_invoice()
         if invoice:
             invoice.pos = self.pos
             invoice.invoice_type = invoice.on_change_with_invoice_type()

@@ -22,7 +22,7 @@ class Configuration(metaclass=PoolMeta):
         pool = Pool()
         if field == 'pos':
             return pool.get('sale.configuration.pos')
-        return super(Configuration, cls).multivalue_model(field)
+        return super().multivalue_model(field)
 
 
 class ConfigurationPos(ModelSQL, CompanyValueMixin):
@@ -40,8 +40,8 @@ class ConfigurationPos(ModelSQL, CompanyValueMixin):
         TableHandler = backend.get('TableHandler')
         exist = TableHandler.table_exist(cls._table)
 
-        super(ConfigurationPos, cls).__register__(module_name)
 
+        super().__register__(module_name)
         if not exist:
             cls._migrate_property([], [], [])
 
