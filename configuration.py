@@ -6,8 +6,6 @@ from trytond.pool import PoolMeta, Pool
 from trytond.tools.multivalue import migrate_property
 from trytond.modules.company.model import CompanyValueMixin
 
-__all__ = ['Configuration', 'ConfigurationPos']
-
 
 class Configuration(metaclass=PoolMeta):
     __name__ = 'sale.configuration'
