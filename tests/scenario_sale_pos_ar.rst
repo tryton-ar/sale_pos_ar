@@ -8,16 +8,17 @@ Imports::
     >>> from dateutil.relativedelta import relativedelta
     >>> from decimal import Decimal
     >>> from operator import attrgetter
-    >>> from proteus import Model, Wizard, Report
+    >>> from proteus import Model, Wizard
     >>> from trytond.tests.tools import activate_modules
     >>> from trytond.modules.company.tests.tools import create_company, \
     ...     get_company
+    >>> from trytond.modules.currency.tests.tools import get_currency
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
     ...     create_chart, get_accounts, create_tax
     >>> from trytond.modules.account_invoice.tests.tools import \
     ...     set_fiscalyear_invoice_sequences, create_payment_term
     >>> from trytond.modules.account_invoice_ar.tests.tools import \
-    ...     create_pos, get_invoice_types, get_pos
+    ...     create_pos, get_invoice_types, get_pos, create_tax_groups
     >>> today = datetime.date.today()
 
 Install sale::
@@ -26,11 +27,12 @@ Install sale::
 
 Create company::
 
-    >>> _ = create_company()
+    >>> currency = get_currency('ARS')
+    >>> _ = create_company(currency=currency)
     >>> company = get_company()
     >>> tax_identifier = company.party.identifiers.new()
     >>> tax_identifier.type = 'ar_cuit'
-    >>> tax_identifier.code = '11111111113'
+    >>> tax_identifier.code = '30710158254' # gcoop CUIT
     >>> company.party.iva_condition = 'responsable_inscripto'
     >>> company.party.save()
 
@@ -46,17 +48,18 @@ Create chart of accounts::
     >>> accounts = get_accounts(company)
     >>> revenue = accounts['revenue']
     >>> expense = accounts['expense']
-    >>> cash = accounts['cash']
+    >>> account_cash = accounts['cash']
+
+Create payment method::
 
     >>> Journal = Model.get('account.journal')
     >>> PaymentMethod = Model.get('account.invoice.payment.method')
-    >>> cash_journal, = Journal.find([('type', '=', 'cash')])
-    >>> cash_journal.save()
+    >>> journal_cash, = Journal.find([('type', '=', 'cash')])
     >>> payment_method = PaymentMethod()
     >>> payment_method.name = 'Cash'
-    >>> payment_method.journal = cash_journal
-    >>> payment_method.credit_account = cash
-    >>> payment_method.debit_account = cash
+    >>> payment_method.journal = journal_cash
+    >>> payment_method.credit_account = account_cash
+    >>> payment_method.debit_account = account_cash
     >>> payment_method.save()
 
 Create point of sale::
@@ -65,9 +68,15 @@ Create point of sale::
     >>> pos = get_pos()
     >>> invoice_types = get_invoice_types()
 
+Create tax groups::
+
+    >>> tax_groups = create_tax_groups()
+
 Create tax::
 
+    >>> TaxCode = Model.get('account.tax.code')
     >>> tax = create_tax(Decimal('.10'))
+    >>> tax.group = tax_groups['gravado']
     >>> tax.save()
 
 Create parties::
@@ -79,7 +88,7 @@ Create parties::
     >>> supplier.save()
     >>> customer = Party(name='Customer',
     ...     iva_condition='responsable_inscripto',
-    ...     vat_number='22222222226')
+    ...     vat_number='33333333339')
     >>> customer.save()
 
 Create account categories::
@@ -105,7 +114,6 @@ Create product::
     >>> template.name = 'product'
     >>> template.default_uom = unit
     >>> template.type = 'goods'
-    >>> template.purchasable = True
     >>> template.salable = True
     >>> template.list_price = Decimal('10')
     >>> template.account_category = account_category_tax
