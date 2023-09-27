@@ -30,7 +30,7 @@ class ConfigurationPos(ModelSQL, CompanyValueMixin):
 
     pos = fields.Many2One('account.pos', "Point of Sale", required=True,
         domain=[('pos_daily_report', '=', False)],
-        depends=['company'])
+        depends={'company'})
 
     @classmethod
     def __register__(cls, module_name):

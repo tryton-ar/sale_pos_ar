@@ -12,8 +12,7 @@ class Sale(metaclass=PoolMeta):
 
     pos = fields.Many2One('account.pos', 'Point of Sale',
         domain=[('pos_daily_report', '=', False)],
-        states={'readonly': Eval('state') != 'draft'},
-        depends=['state'])
+        states={'readonly': Eval('state') != 'draft'})
 
     @staticmethod
     def default_pos():
