@@ -24,6 +24,7 @@ class Sale(metaclass=PoolMeta):
     def create_invoice(self):
         invoice = super().create_invoice()
         if invoice:
+            invoice.save()
             invoice.pos = self.pos
             invoice.invoice_type = invoice.on_change_with_invoice_type()
             invoice.set_pyafipws_concept()
