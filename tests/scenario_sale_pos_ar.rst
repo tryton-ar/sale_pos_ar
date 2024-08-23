@@ -14,11 +14,12 @@ Imports::
     ...     get_company
     >>> from trytond.modules.currency.tests.tools import get_currency
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
-    ...     create_chart, get_accounts, create_tax
+    ...     create_chart, get_accounts, create_tax, create_tax_code
     >>> from trytond.modules.account_invoice.tests.tools import \
     ...     set_fiscalyear_invoice_sequences, create_payment_term
     >>> from trytond.modules.account_invoice_ar.tests.tools import \
-    ...     create_pos, get_invoice_types, get_pos, create_tax_groups
+    ...     create_pos, get_invoice_types, get_pos, get_tax_group, get_wsfev1
+    >>> from trytond.modules.party_ar.tests.tools import set_afip_certs
     >>> today = datetime.date.today()
 
 Install sale::
@@ -41,19 +42,70 @@ Create fiscal year::
     >>> fiscalyear = set_fiscalyear_invoice_sequences(
     ...     create_fiscalyear(company))
     >>> fiscalyear.click('create_period')
+    >>> period = fiscalyear.periods[0]
+    >>> period_ids = [p.id for p in fiscalyear.periods]
 
 Create chart of accounts::
 
     >>> _ = create_chart(company)
     >>> accounts = get_accounts(company)
+    >>> receivable = accounts['receivable']
     >>> revenue = accounts['revenue']
     >>> expense = accounts['expense']
+    >>> account_tax = accounts['tax']
     >>> account_cash = accounts['cash']
+
+Create point of sale::
+
+    >>> _ = create_pos(company, type='electronic', number=4000, ws='wsfe')
+    >>> pos = get_pos(type='electronic', number=4000)
+    >>> invoice_types = get_invoice_types(pos=pos)
+
+Get tax group IVA Ventas Gravado::
+
+    >>> tax_group_gravado = get_tax_group('IVA', 'sale', 'gravado')
+
+Get tax group IVA Ventas No Gravado::
+
+    >>> tax_group_no_gravado = get_tax_group('IVA', 'sale', 'no_gravado')
+
+Create tax IVA 21%::
+
+    >>> TaxCode = Model.get('account.tax.code')
+    >>> tax = create_tax(Decimal('.21'))
+    >>> tax.iva_code = '5'
+    >>> tax.group = tax_group_gravado
+    >>> tax.save()
+    >>> invoice_base_code = create_tax_code(tax, 'base', 'invoice')
+    >>> invoice_base_code.save()
+    >>> invoice_tax_code = create_tax_code(tax, 'tax', 'invoice')
+    >>> invoice_tax_code.save()
+    >>> credit_note_base_code = create_tax_code(tax, 'base', 'credit')
+    >>> credit_note_base_code.save()
+    >>> credit_note_tax_code = create_tax_code(tax, 'tax', 'credit')
+    >>> credit_note_tax_code.save()
+
+Create tax IVA No gravado::
+
+    >>> TaxCode = Model.get('account.tax.code')
+    >>> tax_ = create_tax(Decimal('0'))
+    >>> tax_.iva_code = '1'
+    >>> tax_.group = tax_group_no_gravado
+    >>> tax_.save()
+    >>> invoice_base_code_ = create_tax_code(tax_, 'base', 'invoice')
+    >>> invoice_base_code_.save()
+    >>> invoice_tax_code_ = create_tax_code(tax_, 'tax', 'invoice')
+    >>> invoice_tax_code_.save()
+    >>> credit_note_base_code_ = create_tax_code(tax_, 'base', 'credit')
+    >>> credit_note_base_code_.save()
+    >>> credit_note_tax_code_ = create_tax_code(tax_, 'tax', 'credit')
+    >>> credit_note_tax_code_.save()
 
 Create payment method::
 
     >>> Journal = Model.get('account.journal')
     >>> PaymentMethod = Model.get('account.invoice.payment.method')
+    >>> Sequence = Model.get('ir.sequence')
     >>> journal_cash, = Journal.find([('type', '=', 'cash')])
     >>> payment_method = PaymentMethod()
     >>> payment_method.name = 'Cash'
@@ -62,22 +114,20 @@ Create payment method::
     >>> payment_method.debit_account = account_cash
     >>> payment_method.save()
 
-Create point of sale::
+Create Write Off method::
 
-    >>> _ = create_pos(company)
-    >>> pos = get_pos()
-    >>> invoice_types = get_invoice_types()
-
-Create tax groups::
-
-    >>> tax_groups = create_tax_groups()
-
-Create tax::
-
-    >>> TaxCode = Model.get('account.tax.code')
-    >>> tax = create_tax(Decimal('.10'))
-    >>> tax.group = tax_groups['gravado']
-    >>> tax.save()
+    >>> WriteOff = Model.get('account.move.reconcile.write_off')
+    >>> sequence_journal, = Sequence.find(
+    ...     [('sequence_type.name', '=', "Account Journal")], limit=1)
+    >>> journal_writeoff = Journal(name='Write-Off', type='write-off',
+    ...     sequence=sequence_journal)
+    >>> journal_writeoff.save()
+    >>> writeoff_method = WriteOff()
+    >>> writeoff_method.name = 'Rate loss'
+    >>> writeoff_method.journal = journal_writeoff
+    >>> writeoff_method.credit_account = expense
+    >>> writeoff_method.debit_account = expense
+    >>> writeoff_method.save()
 
 Create parties::
 
@@ -101,15 +151,17 @@ Create account categories::
     >>> account_category.save()
 
     >>> account_category_tax, = account_category.duplicate()
-    >>> account_category_tax.customer_taxes.append(tax)
+    >>> account_category_tax.customer_taxes.append(tax_)
     >>> account_category_tax.save()
+
+    >>> account_category.customer_taxes.append(tax)
+    >>> account_category.save()
 
 Create product::
 
     >>> ProductUom = Model.get('product.uom')
     >>> unit, = ProductUom.find([('name', '=', 'Unit')])
     >>> ProductTemplate = Model.get('product.template')
-
     >>> template = ProductTemplate()
     >>> template.name = 'product'
     >>> template.default_uom = unit
@@ -174,16 +226,16 @@ Sale 5 products::
     >>> sale_line.quantity = 3.0
     >>> sale.click('quote')
     >>> sale.untaxed_amount, sale.tax_amount, sale.total_amount
-    (Decimal('50.00'), Decimal('5.00'), Decimal('55.00'))
+    (Decimal('50.00'), Decimal('0.00'), Decimal('50.00'))
     >>> sale.click('confirm')
     >>> sale.untaxed_amount, sale.tax_amount, sale.total_amount
-    (Decimal('50.00'), Decimal('5.00'), Decimal('55.00'))
+    (Decimal('50.00'), Decimal('0.00'), Decimal('50.00'))
     >>> sale.state
     'processing'
     >>> sale.shipment_state
     'waiting'
     >>> sale.invoice_state
-    'waiting'
+    'pending'
     >>> len(sale.shipments), len(sale.shipment_returns), len(sale.invoices)
     (1, 0, 1)
     >>> invoice, = sale.invoices
@@ -227,7 +279,7 @@ Return sales using the wizard::
     >>> returned_sale.state
     'processing'
     >>> returned_sale.invoice_state
-    'waiting'
+    'pending'
     >>> returned_invoice, = returned_sale.invoices
     >>> returned_invoice.pos == pos
     True
