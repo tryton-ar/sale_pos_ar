@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <data>
-    <xpath expr="/form/field[@name='shipment_address']" position="after">
+    <xpath
+        expr="/form/notebook/page[@id='other']/field[@name='company']"
+        position="after">
         <label name="pos"/>
         <field name="pos" widget="selection"/>
     </xpath>
