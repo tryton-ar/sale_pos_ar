@@ -3,26 +3,25 @@ Sale Scenario
 =============
 
 Imports::
-
-    >>> import datetime
+    >>> import datetime as dt
     >>> from dateutil.relativedelta import relativedelta
     >>> from decimal import Decimal
-    >>> from operator import attrgetter
     >>> from proteus import Model, Wizard
     >>> from trytond.tests.tools import activate_modules
+    >>> from trytond.modules.currency.tests.tools import get_currency
     >>> from trytond.modules.company.tests.tools import create_company, \
     ...     get_company
-    >>> from trytond.modules.currency.tests.tools import get_currency
     >>> from trytond.modules.account.tests.tools import create_fiscalyear, \
-    ...     create_chart, get_accounts, create_tax, create_tax_code
+    ...     create_chart
+    >>> from trytond.modules.account_ar.tests.tools import get_accounts
     >>> from trytond.modules.account_invoice.tests.tools import \
     ...     set_fiscalyear_invoice_sequences, create_payment_term
     >>> from trytond.modules.account_invoice_ar.tests.tools import \
-    ...     create_pos, get_invoice_types, get_pos, get_tax_group, get_wsfev1
+    ...     create_pos, get_pos, get_invoice_types, get_tax, get_wsfev1
     >>> from trytond.modules.party_ar.tests.tools import set_afip_certs
-    >>> today = datetime.date.today()
+    >>> today = dt.date.today()
 
-Install sale::
+Install sale_pos_ar::
 
     >>> config = activate_modules('sale_pos_ar')
 
@@ -32,7 +31,7 @@ Create company::
     >>> _ = create_company(currency=currency)
     >>> company = get_company()
     >>> tax_identifier = company.party.identifiers.new()
-    >>> tax_identifier.type = 'ar_cuit'
+    >>> tax_identifier.type = 'ar_vat'
     >>> tax_identifier.code = '30710158254' # gcoop CUIT
     >>> company.party.iva_condition = 'responsable_inscripto'
     >>> company.party.save()
@@ -47,12 +46,13 @@ Create fiscal year::
 
 Create chart of accounts::
 
-    >>> _ = create_chart(company)
+    >>> _ = create_chart(company, chart='account_ar.root_ar')
     >>> accounts = get_accounts(company)
-    >>> receivable = accounts['receivable']
-    >>> revenue = accounts['revenue']
-    >>> expense = accounts['expense']
-    >>> account_tax = accounts['tax']
+    >>> account_receivable = accounts['receivable']
+    >>> account_payable = accounts['payable']
+    >>> account_revenue = accounts['revenue']
+    >>> account_expense = accounts['expense']
+    >>> account_tax = accounts['sale_tax']
     >>> account_cash = accounts['cash']
 
 Create point of sale::
@@ -61,45 +61,11 @@ Create point of sale::
     >>> pos = get_pos(type='electronic', number=4000)
     >>> invoice_types = get_invoice_types(pos=pos)
 
-Get tax group IVA Ventas Gravado::
+Create taxes::
 
-    >>> tax_group_gravado = get_tax_group('IVA', 'sale', 'gravado')
+    >>> sale_tax = get_tax('IVA Ventas 21%')
+    >>> sale_tax_nogravado = get_tax('IVA Ventas No Gravado')
 
-Get tax group IVA Ventas No Gravado::
-
-    >>> tax_group_no_gravado = get_tax_group('IVA', 'sale', 'no_gravado')
-
-Create tax IVA 21%::
-
-    >>> TaxCode = Model.get('account.tax.code')
-    >>> tax = create_tax(Decimal('.21'))
-    >>> tax.iva_code = '5'
-    >>> tax.group = tax_group_gravado
-    >>> tax.save()
-    >>> invoice_base_code = create_tax_code(tax, 'base', 'invoice')
-    >>> invoice_base_code.save()
-    >>> invoice_tax_code = create_tax_code(tax, 'tax', 'invoice')
-    >>> invoice_tax_code.save()
-    >>> credit_note_base_code = create_tax_code(tax, 'base', 'credit')
-    >>> credit_note_base_code.save()
-    >>> credit_note_tax_code = create_tax_code(tax, 'tax', 'credit')
-    >>> credit_note_tax_code.save()
-
-Create tax IVA No gravado::
-
-    >>> TaxCode = Model.get('account.tax.code')
-    >>> tax_ = create_tax(Decimal('0'))
-    >>> tax_.iva_code = '1'
-    >>> tax_.group = tax_group_no_gravado
-    >>> tax_.save()
-    >>> invoice_base_code_ = create_tax_code(tax_, 'base', 'invoice')
-    >>> invoice_base_code_.save()
-    >>> invoice_tax_code_ = create_tax_code(tax_, 'tax', 'invoice')
-    >>> invoice_tax_code_.save()
-    >>> credit_note_base_code_ = create_tax_code(tax_, 'base', 'credit')
-    >>> credit_note_base_code_.save()
-    >>> credit_note_tax_code_ = create_tax_code(tax_, 'tax', 'credit')
-    >>> credit_note_tax_code_.save()
 
 Create payment method::
 
@@ -125,8 +91,8 @@ Create Write Off method::
     >>> writeoff_method = WriteOff()
     >>> writeoff_method.name = 'Rate loss'
     >>> writeoff_method.journal = journal_writeoff
-    >>> writeoff_method.credit_account = expense
-    >>> writeoff_method.debit_account = expense
+    >>> writeoff_method.credit_account = account_expense
+    >>> writeoff_method.debit_account = account_expense
     >>> writeoff_method.save()
 
 Create parties::
@@ -135,10 +101,12 @@ Create parties::
     >>> supplier = Party(name='Supplier',
     ...     iva_condition='responsable_inscripto',
     ...     vat_number='33333333339')
+    >>> supplier.account_payable = account_payable
     >>> supplier.save()
     >>> customer = Party(name='Customer',
     ...     iva_condition='responsable_inscripto',
     ...     vat_number='33333333339')
+    >>> customer.account_receivable = account_receivable
     >>> customer.save()
 
 Create account categories::
@@ -146,15 +114,9 @@ Create account categories::
     >>> ProductCategory = Model.get('product.category')
     >>> account_category = ProductCategory(name="Account Category")
     >>> account_category.accounting = True
-    >>> account_category.account_expense = expense
-    >>> account_category.account_revenue = revenue
-    >>> account_category.save()
-
-    >>> account_category_tax, = account_category.duplicate()
-    >>> account_category_tax.customer_taxes.append(tax_)
-    >>> account_category_tax.save()
-
-    >>> account_category.customer_taxes.append(tax)
+    >>> account_category.account_expense = account_expense
+    >>> account_category.account_revenue = account_revenue
+    >>> account_category.customer_taxes.append(sale_tax)
     >>> account_category.save()
 
 Create product::
@@ -168,7 +130,7 @@ Create product::
     >>> template.type = 'goods'
     >>> template.salable = True
     >>> template.list_price = Decimal('10')
-    >>> template.account_category = account_category_tax
+    >>> template.account_category = account_category
     >>> template.save()
     >>> product, = template.products
 
@@ -226,10 +188,10 @@ Sale 5 products::
     >>> sale_line.quantity = 3.0
     >>> sale.click('quote')
     >>> sale.untaxed_amount, sale.tax_amount, sale.total_amount
-    (Decimal('50.00'), Decimal('0.00'), Decimal('50.00'))
+    (Decimal('50.00'), Decimal('10.50'), Decimal('60.50'))
     >>> sale.click('confirm')
     >>> sale.untaxed_amount, sale.tax_amount, sale.total_amount
-    (Decimal('50.00'), Decimal('0.00'), Decimal('50.00'))
+    (Decimal('50.00'), Decimal('10.50'), Decimal('60.50'))
     >>> sale.state
     'processing'
     >>> sale.shipment_state
