@@ -3,16 +3,16 @@ msgid ""
 msgstr "Content-Type: text/plain; charset=utf-8\n"
 
 msgctxt "field:sale.configuration,pos:"
-msgid "Point of Sale"
-msgstr "Punto de Venta"
+msgid "Default Point of Sale"
+msgstr "Punto de Venta por defecto"
 
 msgctxt "field:sale.configuration.pos,company:"
 msgid "Company"
 msgstr "Empresa"
 
 msgctxt "field:sale.configuration.pos,pos:"
-msgid "Point of Sale"
-msgstr "Punto de Venta"
+msgid "Default Point of Sale"
+msgstr "Punto de Venta por defecto"
 
 msgctxt "field:sale.sale,pos:"
 msgid "Point of Sale"
