@@ -11,7 +11,7 @@ class Configuration(metaclass=PoolMeta):
     __name__ = 'sale.configuration'
 
     pos = fields.MultiValue(fields.Many2One(
-        'account.pos', "Point of Sale", required=True,
+        'account.pos', 'Default Point of Sale', required=True,
         domain=[('pos_daily_report', '=', False)]))
 
     @classmethod
@@ -23,9 +23,10 @@ class Configuration(metaclass=PoolMeta):
 
 
 class ConfigurationPos(ModelSQL, CompanyValueMixin):
-    "Sale PoS Configuration"
+    'Sale PoS Configuration'
     __name__ = 'sale.configuration.pos'
 
-    pos = fields.Many2One('account.pos', "Point of Sale", required=True,
+    pos = fields.Many2One('account.pos', 'Default Point of Sale',
+        required=True,
         domain=[('pos_daily_report', '=', False)],
         depends={'company'})
